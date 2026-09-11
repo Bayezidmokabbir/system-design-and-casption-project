@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FarmFusion — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest:#22461F;
+    --forest-dark:#152D13;
+    --forest-soft:#3A6035;
+    --marigold:#E8A33D;
+    --marigold-dark:#C97F1E;
+    --marigold-light:#FBE4BC;
+    --cream:#FBF7ED;
+    --paper:#F4EEDC;
+    --soil:#3A2C20;
+    --soil-light:#7A6A57;
+    --sky:#5B93A0;
+    --white:#FFFFFF;
+    --danger:#BE4530;
+    --danger-light:#F6DCD4;
+    --success:#4C7A3D;
+    --success-light:#E1EDD8;
+    --line:#E6DCC4;
+    --shadow: 0 10px 30px -12px rgba(58,44,32,0.25);
+    --radius: 18px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: transparent;
+    font-family:'Manrope', sans-serif;
+    color:var(--soil);
+    -webkit-font-smoothing:antialiased;
+    display:flex; align-items:flex-start; justify-content:center;
+    min-height:100vh;
+    padding: 18px 8px;
+  }
+  .stage{ display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+  /* ---------- device frame ---------- */
+  .device{
+    width:390px; height:820px;
+    background:var(--soil);
+    border-radius:46px;
+    padding:12px;
+    box-shadow: var(--shadow);
+    position:relative;
+    flex-shrink:0;
+  }
+  .device .screen{
+    width:100%; height:100%;
+    background:var(--cream);
+    border-radius:36px;
+    overflow:hidden;
+    position:relative;
+    display:flex; flex-direction:column;
+  }
+  .notch{
+    position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:120px; height:26px; background:var(--soil); border-radius:0 0 16px 16px; z-index:50;
+  }
+  .statusbar{
+    height:34px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    padding: 6px 26px 0 26px; font-size:12px; font-weight:700; color:var(--soil); font-family:'Space Mono',monospace;
+  }
+  .app-body{ flex:1; overflow-y:auto; position:relative; scrollbar-width:none; }
+  .app-body::-webkit-scrollbar{ display:none; }
+
+  /* furrow texture — signature motif */
+  .furrow{
+    background-image: repeating-linear-gradient( -18deg, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 1.5px, transparent 1.5px, transparent 13px );
+  }
+
+  /* ---------- top app headers ---------- */
+  .topbar{
+    padding:18px 20px 16px; background:var(--forest); color:var(--white); position:relative; overflow:hidden;
+  }
+  .topbar.small{ padding:16px 18px 14px; }
+  .topbar-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; position:relative; z-index:2;}
+  .topbar h1{ font-family:'Fraunces', serif; font-weight:600; font-size:22px; letter-spacing:0.2px; }
+  .topbar .eyebrow{ font-size:11px; text-transform:uppercase; letter-spacing:1.5px; opacity:0.75; font-weight:700; margin-bottom:2px;}
+  .iconbtn{
+    width:38px; height:38px; border-radius:12px; background:rgba(255,255,255,0.14); border:none;
+    display:flex; align-items:center; justify-content:center; color:var(--white); cursor:pointer; flex-shrink:0;
+  }
+  .iconbtn:active{ background:rgba(255,255,255,0.26); }
+  .back-row{ display:flex; align-items:center; gap:10px; }
+  .back-row .title{ font-family:'Fraunces', serif; font-size:19px; font-weight:600; }
+
+  /* ---------- bottom nav ---------- */
+  .bottomnav{
+    display:flex; background:var(--white); border-top:1px solid var(--line); flex-shrink:0;
+    padding: 8px 6px calc(10px + env(safe-area-inset-bottom,0px));
+  }
+  .navitem{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none; cursor:pointer;
+    color:var(--soil-light); padding:6px 2px; border-radius:12px; font-family:'Manrope';
+  }
+  .navitem .lbl{ font-size:10.5px; font-weight:700; }
+  .navitem.active{ color:var(--forest); }
+  .navitem.active .ic-wrap{ background:var(--marigold-light); }
+  .ic-wrap{ width:34px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:10px; }
+
+  /* ---------- generic content blocks ---------- */
+  .px{ padding-left:20px; padding-right:20px; }
+  .section{ padding:18px 20px 6px; }
+  .section-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
+  .section-head h3{ font-family:'Fraunces', serif; font-size:16.5px; font-weight:600; color:var(--soil);}
+  .section-head a{ font-size:12px; font-weight:700; color:var(--forest-soft); text-decoration:none; }
+
+  .card{ background:var(--white); border-radius:var(--radius); padding:16px; border:1px solid var(--line); }
+  .card + .card{ margin-top:12px; }
+  .row{ display:flex; align-items:center; gap:12px; }
+  .between{ justify-content:space-between; }
+  .chip{
+    display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:5px 10px; border-radius:99px;
+  }
+  .chip.good{ background:var(--success-light); color:var(--success); }
+  .chip.warn{ background:var(--marigold-light); color:var(--marigold-dark); }
+  .chip.bad{ background:var(--danger-light); color:var(--danger); }
+  .chip.sky{ background:#E4EEF0; color:var(--sky); }
+
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px; font-family:'Manrope'; font-weight:800; font-size:14px;
+    border-radius:14px; padding:14px; border:none; cursor:pointer; width:100%;
+  }
+  .btn-primary{ background:var(--forest); color:var(--white); }
+  .btn-primary:active{ background:var(--forest-dark); }
+  .btn-marigold{ background:var(--marigold); color:var(--soil); }
+  .btn-ghost{ background:var(--paper); color:var(--soil); }
+  .btn-outline{ background:transparent; color:var(--forest); border:1.5px solid var(--forest); }
+  .btn.sm{ padding:9px 14px; font-size:12.5px; width:auto; border-radius:11px; }
+
+  input, select, textarea{
+    width:100%; border:1.5px solid var(--line); background:var(--white); border-radius:13px; padding:13px 14px;
+    font-family:'Manrope'; font-size:14px; color:var(--soil); outline:none;
+  }
+  input:focus, select:focus, textarea:focus{ border-color:var(--forest-soft); }
+  label.field-label{ font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; color:var(--soil-light); margin-bottom:6px; display:block;}
+  .field{ margin-bottom:14px; }
+  .search-wrap{ position:relative; }
+  .search-wrap input{ padding-left:42px; }
+  .search-wrap .ic{ position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--soil-light);}
+
+  .tag-scroll{ display:flex; gap:8px; overflow-x:auto; padding:2px 20px 4px; scrollbar-width:none; }
+  .tag-scroll::-webkit-scrollbar{display:none;}
+  .tag{ flex-shrink:0; padding:9px 15px; border-radius:99px; font-size:12.5px; font-weight:700; background:var(--white); border:1.5px solid var(--line); color:var(--soil-light); cursor:pointer; white-space:nowrap;}
+  .tag.active{ background:var(--forest); border-color:var(--forest); color:var(--white); }
+
+  .avatar{ width:44px; height:44px; border-radius:13px; background:var(--marigold-light); display:flex; align-items:center; justify-content:center; color:var(--marigold-dark); flex-shrink:0; font-weight:800; font-family:'Fraunces';}
+  .avatar.round{ border-radius:50%; }
+  .avatar.lg{ width:64px; height:64px; border-radius:18px; font-size:22px;}
+  .avatar.round.lg{ border-radius:50%; }
+
+  .divider{ height:1px; background:var(--line); margin:14px 0; }
+  .muted{ color:var(--soil-light); }
+  .fw8{font-weight:800;}
+  .fw7{font-weight:700;}
+  .fs11{font-size:11px;}
+  .fs12{font-size:12px;}
+  .fs13{font-size:13px;}
+  .num{ font-family:'Space Mono', monospace; }
+
+  .fab{
+    position:absolute; right:18px; bottom:86px; width:54px; height:54px; border-radius:18px; background:var(--marigold);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px -4px rgba(200,127,30,0.55); border:none; color:var(--soil); z-index:30; cursor:pointer;
+  }
+
+  /* progress / stat bars */
+  .barTrack{ height:8px; background:var(--paper); border-radius:99px; overflow:hidden; }
+  .barFill{ height:100%; border-radius:99px; background:var(--forest-soft); }
+
+  .empty{ text-align:center; padding:50px 30px; color:var(--soil-light); }
+  .empty svg{ margin-bottom:14px; opacity:0.5;}
+
+  .toast{
+    position:absolute; left:20px; right:20px; bottom:96px; background:var(--soil); color:var(--white); padding:13px 16px; border-radius:14px;
+    font-size:13px; font-weight:700; display:flex; align-items:center; gap:10px; z-index:80; box-shadow:var(--shadow);
+    animation: rise 0.25s ease-out;
+  }
+  @keyframes rise{ from{ transform:translateY(16px); opacity:0;} to{ transform:translateY(0); opacity:1;} }
+
+  /* role badge on splash */
+  .roleCard{ display:flex; align-items:center; gap:14px; background:var(--white); border:1.5px solid var(--line); border-radius:16px; padding:14px; cursor:pointer; }
+  .roleCard:active{ border-color:var(--forest); background:var(--marigold-light); }
+  .roleCard .ic-box{ width:46px; height:46px; border-radius:13px; background:var(--forest); display:flex; align-items:center; justify-content:center; color:var(--white); flex-shrink:0;}
+
+  ::selection{ background:var(--marigold-light); }
+
+  /* side panel: dev/nav helper outside phone */
+  .panel{
+    width:250px; background:var(--white); border-radius:20px; padding:18px; box-shadow:var(--shadow); border:1px solid var(--line);
+  }
+  .panel h4{ font-family:'Fraunces'; font-size:15px; margin-bottom:4px; }
+  .panel p.small{ font-size:12px; color:var(--soil-light); line-height:1.5; margin-bottom:14px;}
+  .panel-btn{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px; background:var(--paper); border:none; width:100%; text-align:left; font-family:'Manrope'; font-weight:700; font-size:12.5px; color:var(--soil); margin-bottom:8px; cursor:pointer;}
+  .panel-btn.active{ background:var(--forest); color:#fff; }
+  .panel-btn:last-child{margin-bottom:0;}
+
+  @media (max-width: 700px){
+    .stage{ transform-origin: top center; }
+    .panel{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div class="panel">
+    <h4>FarmFusion</h4>
+    <p class="small">Smart Agro‑Diary Ecosystem — clickable UI/UX prototype generated from the SRS. Switch role to preview a different dashboard, or jump to a screen.</p>
+    <div id="roleSwitch"></div>
+    <div class="divider"></div>
+    <p class="small" style="margin-bottom:8px;">Jump to screen</p>
+    <div id="jumpList"></div>
+  </div>
+
+  <div class="device">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="statusbar">
+        <span id="clock">9:41</span>
+        <span style="display:flex; gap:5px; align-items:center;">
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><rect x="0" y="6" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="4.5" y="4" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="9" y="1.5" width="3" height="9.5" rx="0.5" fill="currentColor"/><rect x="13.5" y="0" width="2.5" height="11" rx="0.5" fill="currentColor" opacity="0.35"/></svg>
+          <svg width="15" height="11" viewBox="0 0 24 17"><path d="M12 17c.5 0 1-.2 1.3-.6l2-2.5c-1.9-1.6-4.7-1.6-6.6 0l2 2.5c.3.4.8.6 1.3.6z" fill="currentColor"/><path d="M12 9c2.3 0 4.5.9 6.1 2.4l2-2.5C17.7 6.7 15 5.5 12 5.5S6.3 6.7 3.9 8.9l2 2.5C7.5 9.9 9.7 9 12 9z" fill="currentColor" opacity="0.5"/></svg>
+        </span>
+      </div>
+      <div class="app-body" id="appBody"></div>
+      <div id="bottomNavHolder"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================= ICONS ============================= */
+function ic(name, size=20, stroke=2){
+  const P = {
+    home:'<path d="M4 11 12 4l8 7"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/>',
+    cow:'<path d="M6 10c-1.5 0-2.5-1-2.5-2.2C3.5 6.6 4.4 6 5.3 6.4L7 7.5"/><path d="M18 10c1.5 0 2.5-1 2.5-2.2 0-1.2-.9-1.8-1.8-1.4L17 7.5"/><path d="M6.5 9.5C6.5 6.5 9 4.5 12 4.5s5.5 2 5.5 5c0 1.6-.6 2.6-1.3 3.6-.6.8-1 1.6-1 2.7V17c0 1.7-1.3 3-3 3h-.4c-1.7 0-3-1.3-3-3v-1.2c0-1.1-.4-1.9-1-2.7-.7-1-1.3-2-1.3-3.6Z"/><circle cx="10" cy="10.5" r=".6" fill="currentColor" stroke="none"/><circle cx="14" cy="11.5" r=".6" fill="currentColor" stroke="none"/>',
+    droplet:'<path d="M12 3s6 6.6 6 10.5A6 6 0 0 1 6 13.5C6 9.6 12 3 12 3Z"/>',
+    heart:'<path d="M12 20s-7.3-4.5-9.6-9C1 8 2.4 4.8 5.6 4.1c2-.4 3.7.5 4.9 2.1 1.2-1.6 3-2.5 4.9-2.1C18.6 4.8 20 8 18.6 11c-2.3 4.5-6.6 9-6.6 9Z"/><path d="M8 11h2l1.3-2 1.4 3.5L14 10h2"/>',
+    wallet:'<rect x="3" y="6.5" width="18" height="12" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1" fill="currentColor" stroke="none"/>',
+    chart:'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
+    leaf:'<path d="M5 19c9 0 14-5 14-14 0 0-11-1-14 6-2 4.5 0 8 0 8Z"/><path d="M5 19c0-4 2-8 5.5-10.5"/>',
+    shop:'<path d="M4 8 5.5 4h13L20 8"/><path d="M4 8h16v10.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5V8Z"/><path d="M9 12a3 3 0 0 0 6 0"/>',
+    cart:'<circle cx="9" cy="20" r="1.3" fill="currentColor" stroke="none"/><circle cx="17" cy="20" r="1.3" fill="currentColor" stroke="none"/><path d="M3 4h2l2.2 11.4a1.5 1.5 0 0 0 1.5 1.2h8.1a1.5 1.5 0 0 0 1.5-1.2L20 8H6"/>',
+    user:'<circle cx="12" cy="8.3" r="3.3"/><path d="M5 19.5c1.4-3.6 4-5.2 7-5.2s5.6 1.6 7 5.2"/>',
+    chat:'<path d="M4 12a8 8 0 1 1 3.5 6.6L4 20l1.2-3.8A7.9 7.9 0 0 1 4 12Z"/><circle cx="8.5" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="15.5" cy="12" r=".8" fill="currentColor" stroke="none"/>',
+    bell:'<path d="M6 9a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13 6 9Z"/><path d="M9.5 17.5a2.5 2.5 0 0 0 5 0"/>',
+    search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.5-4.5"/>',
+    filter:'<path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/>',
+    chevL:'<path d="M15 5 8 12l7 7"/>',
+    chevR:'<path d="M9 5l7 7-7 7"/>',
+    plus:'<path d="M12 5v14"/><path d="M5 12h14"/>',
+    minus:'<path d="M5 12h14"/>',
+    check:'<path d="m4 12 6 6L20 6"/>',
+    x:'<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
+    camera:'<path d="M4 8h3l1.5-2.3h7L17 8h3v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Z"/><circle cx="12" cy="13.5" r="3.6"/>',
+    image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m3 17 5.5-5.5c.8-.8 1.7-.8 2.5 0L18 18"/>',
+    grid:'<rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>',
+    alert:'<path d="M12 3 22 20H2Z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.3" r=".2" fill="currentColor" stroke="currentColor" stroke-width="2.4"/>',
+    trend:'<path d="m3 16 6-6 4 4 8-9"/><path d="M15 5h6v6"/>',
+    package:'<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+    mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/>',
+    send:'<path d="M4 12 20 4l-6.5 16-3-6.5L4 12Z"/>',
+    settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V20a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H4a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.6V4a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9V10c.1.7.6 1.3 1.3 1.5h.3a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.6 1Z"/>',
+    logout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+    calendar:'<rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M3.5 10h17"/><path d="M8 3v4"/><path d="M16 3v4"/>',
+    syringe:'<path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 5 8.5 15.5l-1 3.5-3.5 1 1-3.5L15.5 6Z"/><path d="m9 14 1 1"/><path d="m12 11 1 1"/>',
+    feed:'<path d="M20 6H10a4 4 0 0 0-4 4v9"/><path d="M20 6v9a4 4 0 0 1-4 4h-5"/><path d="M4 12h4"/><circle cx="7" cy="6" r="2.5"/>',
+    star:'<path d="m12 3 2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 17l-5.6 3.1 1.4-6.3L3 9.5l6.4-.6Z"/>',
+    truck:'<rect x="2" y="7" width="12" height="10" rx="1"/><path d="M14 10h4l3 3.2V17h-7"/><circle cx="6.5" cy="19" r="1.6"/><circle cx="17" cy="19" r="1.6"/>',
+    volume:'<path d="M5 9v6h4l5 4V5L9 9H5Z"/><path d="M17 9a4 4 0 0 1 0 6"/>',
+    mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6.5 9 6 9-6"/>',
+    globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18"/><path d="M12 3a15 15 0 0 0 0 18"/>',
+    flag:'<path d="M5 21V4"/><path d="M5 4h13l-3 4.5L18 13H5"/>',
+    download:'<path d="M12 3v13"/><path d="m6 11 6 6 6-6"/><path d="M5 21h14"/>',
+    edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    tag:'<path d="M20.6 12.3 12.3 20.6a2 2 0 0 1-2.8 0l-6.1-6.1a2 2 0 0 1 0-2.8L11.7 3.4A2 2 0 0 1 13.1 3h5.5A2.4 2.4 0 0 1 21 5.4v5.5a2 2 0 0 1-.4 1.4Z"/><circle cx="15.5" cy="8.5" r="1.3"/>'
+  };
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round">${P[name]||''}</svg>`;
+}
+
+/* ============================= STATE ============================= */
+const state = {
+  role: null,          // owner | worker | vet | customer
+  screen: 'splash',
+  history: [],
+  cart: [],
+  lang: 'en',
+  selectedCow: null,
+  selectedWorker: null,
+  taskFilter: 'all',
+};
+
+const ROLES = {
+  owner:    { label:'Farm Owner',        icon:'user',  tabs:['home','cows','finance','reports','more'] },
+  worker:   { label:'Farm Worker',       icon:'feed',  tabs:['home','cows','feed','health','more'] },
+  vet:      { label:'Veterinary Advisor',icon:'heart', tabs:['home','health','calendar','more'] },
+  customer: { label:'Customer',          icon:'shop',  tabs:['shop','cart','orders','assistant','more'] },
+};
+
+const TAB_META = {
+  home:{icon:'home', label:'Home'},
+  cows:{icon:'cow', label:'Cows'},
+  feed:{icon:'feed', label:'Feed'},
+  health:{icon:'heart', label:'Health'},
+  finance:{icon:'wallet', label:'Finance'},
+  reports:{icon:'chart', label:'Reports'},
+  calendar:{icon:'calendar', label:'Schedule'},
+  shop:{icon:'shop', label:'Shop'},
+  cart:{icon:'cart', label:'Cart'},
+  orders:{icon:'truck', label:'Orders'},
+  assistant:{icon:'chat', label:'Assistant'},
+  more:{icon:'grid', label:'More'},
+};
+
+const COWS = [
+  {id:'BD-014', name:'Josna', breed:'Local x Sahiwal', age:'3.2 yr', weight:'312 kg', status:'Healthy', milk:'11.4 L', tag:'good', photo:'🐄', feedCost:145, medCost:10, revenue:912, note:'Peak lactation — top performer'},
+  {id:'BD-021', name:'Rupali', breed:'Holstein Friesian x Local', age:'2.6 yr', weight:'289 kg', status:'Vaccine due', milk:'9.8 L', tag:'warn', photo:'🐄', feedCost:160, medCost:15, revenue:784, note:'Steady yield, vaccine cost upcoming'},
+  {id:'BD-009', name:'Moti', breed:'Sahiwal', age:'5.1 yr', weight:'358 kg', status:'Under treatment', milk:'6.2 L', tag:'bad', photo:'🐄', feedCost:150, medCost:210, revenue:496, note:'Treatment cost cutting into margin'},
+  {id:'BD-031', name:'Kajol', breed:'Local x Jersey', age:'1.9 yr', weight:'210 kg', status:'Healthy', milk:'—', tag:'good', photo:'🐄', feedCost:90, medCost:5, revenue:0, note:'Not yet in production — growth investment'},
+];
+// derived profitability helpers
+function cowProfit(c){ return c.revenue - c.feedCost - c.medCost; }
+function cowMargin(c){ return c.revenue>0 ? Math.round((cowProfit(c)/c.revenue)*100) : null; }
+
+const WORKERS = [
+  {id:'w1', name:'Rahim Mia', avatar:'RM', role:'Milking & feeding', lastActive:'10 min ago', tasksToday:4, tasksDone:3, status:'active'},
+  {id:'w2', name:'Salma Begum', avatar:'SB', role:'Cleaning & waste', lastActive:'1 hr ago', tasksToday:3, tasksDone:3, status:'active'},
+  {id:'w3', name:'Jamal Uddin', avatar:'JU', role:'Feed & inventory', lastActive:'3 hr ago', tasksToday:3, tasksDone:1, status:'behind'},
+];
+
+const TASKS = [
+  {id:'t1', title:'Morning milking — Sector A', assignee:'w1', due:'6:30 AM', status:'done'},
+  {id:'t2', title:'Morning feed ration — all herd', assignee:'w1', due:'6:45 AM', status:'done'},
+  {id:'t3', title:'Log daily waste entry', assignee:'w2', due:'6:00 AM', status:'done'},
+  {id:'t4', title:'Clean milking shed', assignee:'w2', due:'7:30 AM', status:'done'},
+  {id:'t5', title:'Check feed stock & reorder', assignee:'w3', due:'9:00 AM', status:'done'},
+  {id:'t6', title:'Evening milking — Sector A', assignee:'w1', due:'5:30 PM', status:'pending'},
+  {id:'t7', title:'Assist vet — vaccinate Rupali', assignee:'w1', due:'Tomorrow 9:00 AM', status:'upcoming'},
+  {id:'t8', title:'Restock dry feed (200kg)', assignee:'w3', due:'2:00 PM', status:'pending'},
+  {id:'t9', title:'Fodder cutting — Sector B', assignee:'w3', due:'4:00 PM', status:'pending'},
+];
+
+const PRODUCTS = [
+  {id:'p1', name:'Fresh Cow Milk', unit:'1 Litre', price:80, stock:'42 L left', emoji:'🥛', cat:'Milk'},
+  {id:'p2', name:'Pure Ghee', unit:'500 g jar', price:650, stock:'18 jars left', emoji:'🧈', cat:'Ghee'},
+  {id:'p3', name:'Farm Yogurt', unit:'400 g cup', price:120, stock:'26 cups left', emoji:'🍦', cat:'Yogurt'},
+  {id:'p4', name:'Homestyle Cheese', unit:'250 g block', price:340, stock:'9 blocks left', emoji:'🧀', cat:'Cheese'},
+];
+
+/* ============================= HELPERS ============================= */
+function go(screen, extra){ state.history.push(state.screen); if(extra) Object.assign(state, extra); state.screen = screen; render(); window._appBody && (window._appBody.scrollTop = 0); }
+function back(){ state.screen = state.history.pop() || 'home'; render(); }
+function setRole(r){ state.role = r; state.history=[]; go(ROLES[r].tabs[0]); }
+function toast(msg){
+  const body = document.getElementById('appBody');
+  const t = document.createElement('div'); t.className='toast'; t.innerHTML = ic('check',16)+`<span>${msg}</span>`;
+  body.appendChild(t); setTimeout(()=>t.remove(), 1900);
+}
+
+function topbar({title, eyebrow, back:showBack, right}={}){
+  return `<div class="topbar furrow">
+    <div class="topbar-row">
+      ${showBack ? `<div class="back-row"><button class="iconbtn" onclick="back()">${ic('chevL',20)}</button><div><div class="title">${title}</div></div></div>`
+      : `<div>${eyebrow?`<div class="eyebrow">${eyebrow}</div>`:''}<h1>${title}</h1></div>`}
+      ${right||''}
+    </div>
+  </div>`;
+}
+
+function bottomNav(){
+  if(!state.role) return '';
+  const tabs = ROLES[state.role].tabs;
+  return `<div class="bottomnav">
+    ${tabs.map(t=>{
+      const m = TAB_META[t];
+      const active = state.screen===t;
+      const badge = (t==='cart' && state.cart.length) ? `<span style="position:absolute;top:-2px;right:2px;background:var(--danger);color:#fff;font-size:9px;font-weight:800;border-radius:99px;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;">${state.cart.length}</span>`:'';
+      return `<button class="navitem ${active?'active':''}" onclick="go('${t}')">
+        <span class="ic-wrap" style="position:relative;">${ic(m.icon,19)}${badge}</span>
+        <span class="lbl">${m.label}</span>
+      </button>`;
+    }).join('')}
+  </div>`;
+}
+
+/* mini svg line chart */
+function lineChart(points, w=327, h=110, color='var(--forest)'){
+  const max = Math.max(...points), min = Math.min(...points);
+  const range = (max-min)||1;
+  const step = w/(points.length-1);
+  const coords = points.map((p,i)=>[i*step, h - ((p-min)/range)*(h-18) - 8]);
+  const path = coords.map((c,i)=> (i===0?'M':'L')+c[0].toFixed(1)+','+c[1].toFixed(1)).join(' ');
+  const area = path + ` L${w},${h} L0,${h} Z`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="overflow:visible;">
+    <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.28"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${area}" fill="url(#ga)"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${coords[coords.length-1][0]}" cy="${coords[coords.length-1][1]}" r="4.5" fill="${color}"/>
+  </svg>`;
+}
+function barChart(points,labels,w=327,h=120,color='var(--marigold)'){
+  const max = Math.max(...points)||1; const bw = (w/points.length)*0.5; const gap=(w/points.length);
+  return `<svg width="${w}" height="${h+18}" viewBox="0 0 ${w} ${h+18}">
+    ${points.map((p,i)=>{
+      const bh = (p/max)*(h-10); const x = i*gap + (gap-bw)/2; const y = h-bh;
+      return `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${i===points.length-1?'var(--forest)':color}" />
+      <text x="${x+bw/2}" y="${h+14}" font-size="9" fill="var(--soil-light)" text-anchor="middle" font-family="Manrope">${labels[i]}</text>`;
+    }).join('')}
+  </svg>`;
+}
+
+/* ============================= SCREENS ============================= */
+const Screens = {};
+
+Screens.splash = ()=> `
+  <div style="height:100%; background:var(--forest); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; padding:40px; position:relative;" class="furrow">
+    <div style="width:88px;height:88px;background:var(--marigold);border-radius:26px;display:flex;align-items:center;justify-content:center;margin-bottom:22px; box-shadow:0 14px 30px -8px rgba(0,0,0,0.35);">
+      ${ic('cow',44,1.6)}
+    </div>
+    <h1 style="font-family:'Fraunces',serif; font-size:32px; font-weight:600;">FarmFusion</h1>
+    <p style="opacity:0.8; font-size:13px; margin-top:8px; text-align:center; max-width:240px; line-height:1.5;">Smart Agro‑Diary Ecosystem for Bangladesh's dairy farms</p>
+    <div style="position:absolute; bottom:44px; left:40px; right:40px;">
+      <button class="btn btn-marigold" onclick="go('login')">Get started ${ic('chevR',16)}</button>
+      <p style="text-align:center; font-size:11px; opacity:0.6; margin-top:14px;">Works offline · Syncs when you're online</p>
+    </div>
+  </div>`;
+
+Screens.login = ()=>{
+  const roleIcons = {owner:'user', worker:'feed', vet:'heart', customer:'shop'};
+  const roleDesc = {
+    owner:'Full access — cows, finance, reports',
+    worker:'Daily entries — milk, feed, health',
+    vet:'Health records & vaccination schedules',
+    customer:'Browse & order dairy products'
+  };
+  return `
+  ${topbar({eyebrow:'Welcome', title:'Sign in to FarmFusion'})}
+  <div class="section">
+    <div class="field">
+      <label class="field-label">Mobile number</label>
+      <input value="+880 1XXX-XXXXXX" />
+    </div>
+    <div class="field">
+      <label class="field-label">Password</label>
+      <input type="password" value="••••••••" />
+    </div>
+    <p style="text-align:right; font-size:12px; font-weight:700; color:var(--forest-soft); margin:-6px 0 18px;" onclick="go('forgot')">Forgot password?</p>
+    <p class="field-label" style="margin-bottom:10px;">Continue as</p>
+    ${Object.keys(ROLES).map(r=>`
+      <div class="roleCard" style="margin-bottom:10px;" onclick="setRole('${r}')">
+        <div class="ic-box">${ic(roleIcons[r],22)}</div>
+        <div style="flex:1;">
+          <div class="fw8" style="font-size:14px;">${ROLES[r].label}</div>
+          <div class="muted fs12">${roleDesc[r]}</div>
+        </div>
+        ${ic('chevR',18)}
+      </div>`).join('')}
+    <p style="text-align:center; font-size:12.5px; margin-top:16px;" class="muted">New here? <span style="color:var(--forest-soft); font-weight:800;" onclick="go('register')">Create an account</span></p>
+  </div>`;
+};
+
+Screens.forgot = ()=> `
+  ${topbar({title:'Reset password', back:true})}
+  <div class="section">
+    <p class="muted fs13" style="margin-bottom:18px; line-height:1.6;">Enter your registered mobile number. We'll send a verification code by SMS to reset your password.</p>
+    <div class="field"><label class="field-label">Mobile number</label><input value="+880 1XXX-XXXXXX"/></div>
+    <button class="btn btn-primary" onclick="toast('Verification code sent')">Send verification code</button>
+  </div>`;
+
+Screens.register = ()=> `
+  ${topbar({title:'Create your account', back:true})}
+  <div class="section">
+    <div class="field"><label class="field-label">Full name</label><input value=""/></div>
+    <div class="field"><label class="field-label">Mobile number</label><input value=""/></div>
+    <div class="field"><label class="field-label">Role</label>
+      <select><option>Farm Owner</option><option>Farm Worker</option><option>Veterinary Advisor</option><option>Customer</option></select>
+    </div>
+    <div class="field"><label class="field-label">Farm location</label><input value="e.g. Sirajganj, Rajshahi"/></div>
+    <div class="field"><label class="field-label">Password</label><input type="password"/></div>
+    <button class="btn btn-primary" onclick="go('login')">Create account</button>
+  </div>`;
+
+/* ---------------- OWNER: HOME ---------------- */
+Screens.home = ()=>{
+  if(state.role==='vet') return Screens.vetHome();
+  return `
+  ${topbar({eyebrow:'Namaskar, Karim Sheikh', title:'Rupganj Dairy Farm', right:`<button class="iconbtn" onclick="go('notifications')" style="position:relative;">${ic('bell',19)}<span style="position:absolute;top:6px;right:7px;width:7px;height:7px;background:var(--marigold);border-radius:50%;"></span></button>`})}
+
+  <div class="section" style="padding-top:16px;">
+    <div class="card" style="background:linear-gradient(135deg, var(--forest) 0%, var(--forest-soft) 100%); border:none; color:#fff;">
+      <div class="row between">
+        <div>
+          <div class="fs11" style="opacity:0.75; font-weight:700; text-transform:uppercase; letter-spacing:0.6px;">Today's milk yield</div>
+          <div style="font-family:'Fraunces'; font-size:30px; font-weight:600; margin-top:4px;" class="num">38.4 <span style="font-size:15px; font-weight:600; font-family:'Manrope';">Litres</span></div>
+          <div class="fs12" style="opacity:0.85; margin-top:4px;">▲ 6% vs yesterday · AI forecast: 40L tomorrow</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15); padding:10px; border-radius:12px;">${ic('droplet',22)}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><h3>Smart alerts</h3><a onclick="go('notifications')">See all</a></div>
+    <div class="card" style="border-left:4px solid var(--danger);">
+      <div class="row" style="align-items:flex-start;">
+        <div style="color:var(--danger); flex-shrink:0;">${ic('alert',20)}</div>
+        <div style="flex:1;">
+          <div class="fw8 fs13">Milk drop detected — Moti (BD‑009)</div>
+          <div class="muted fs12" style="margin-top:2px;">AI flagged a 34% yield drop over 3 days. Possible early illness — recommend vet check.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--marigold-dark);">
+      <div class="row" style="align-items:flex-start;">
+        <div style="color:var(--marigold-dark); flex-shrink:0;">${ic('syringe',20)}</div>
+        <div style="flex:1;">
+          <div class="fw8 fs13">Vaccination due tomorrow — Rupali</div>
+          <div class="muted fs12" style="margin-top:2px;">FMD booster scheduled for 3 Aug. Assign to vet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><h3>Farm snapshot</h3></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="card" onclick="go('cows')" style="cursor:pointer;">
+        <div class="row between"><span class="chip good">${ic('cow',12)} Herd</span></div>
+        <div style="font-family:'Fraunces'; font-size:22px; font-weight:600; margin-top:8px;">24 <span class="fs12 muted" style="font-family:'Manrope';">cows</span></div>
+        <div class="fs11 muted">2 need attention</div>
+      </div>
+      <div class="card" onclick="go('feed')" style="cursor:pointer;">
+        <div class="row between"><span class="chip warn">${ic('feed',12)} Feed</span></div>
+        <div style="font-family:'Fraunces'; font-size:22px; font-weight:600; margin-top:8px;">6 <span class="fs12 muted" style="font-family:'Manrope';">days left</span></div>
+        <div class="fs11 muted">Reorder soon</div>
+      </div>
+      <div class="card" onclick="go('finance')" style="cursor:pointer;">
+        <div class="row between"><span class="chip good">${ic('wallet',12)} Profit</span></div>
+        <div style="font-family:'Fraunces'; font-size:22px; font-weight:600; margin-top:8px;" class="num">৳18.4k</div>
+        <div class="fs11 muted">This month</div>
+      </div>
+      <div class="card" onclick="go('products')" style="cursor:pointer;">
+        <div class="row between"><span class="chip sky">${ic('package',12)} Products</span></div>
+        <div style="font-family:'Fraunces'; font-size:22px; font-weight:600; margin-top:8px;">4 <span class="fs12 muted" style="font-family:'Manrope';">lines</span></div>
+        <div class="fs11 muted">Ghee low stock</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><h3>Team today</h3><a onclick="go('team')">Manage</a></div>
+    <div class="card">
+      <div style="display:flex; margin-bottom:10px;">
+        ${WORKERS.map(w=>`<div class="avatar round" style="width:36px;height:36px;font-size:12px; margin-right:-8px; border:2px solid var(--white); cursor:pointer;" onclick="go('workerDetail',{selectedWorker:'${w.id}'})">${w.avatar}</div>`).join('')}
+      </div>
+      ${WORKERS.map(w=>`
+        <div class="row between" style="margin-bottom:8px; cursor:pointer;" onclick="go('workerDetail',{selectedWorker:'${w.id}'})">
+          <div class="fs12 fw7">${w.name}</div>
+          <span class="chip ${w.status==='active'?'good':'warn'}">${w.tasksDone}/${w.tasksToday} tasks</span>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><h3>Herd profitability</h3><a onclick="go('profitability')">See ranking</a></div>
+    <div class="card">
+      ${[...COWS].sort((a,b)=>cowProfit(b)-cowProfit(a)).slice(0,2).map(c=>`
+        <div class="row between" style="margin-bottom:8px;">
+          <div class="fs12 fw7">${c.name} <span class="muted fs11" style="font-weight:600;">· ${c.id}</span></div>
+          <div class="fw8 num fs12" style="color:${cowProfit(c)>=0?'var(--success)':'var(--danger)'};">৳${cowProfit(c)}/day</div>
+        </div>`).join('')}
+      <div class="fs11 muted">Top performers by net profit / day</div>
+    </div>
+  </div>
+
+  <div class="section" style="padding-bottom:22px;">
+    <div class="section-head"><h3>Milk trend — 7 days</h3><a onclick="go('milkAnalytics')">Details</a></div>
+    <div class="card">${lineChart([31,34,29,36,33,35,38.4])}</div>
+  </div>
+  `;
+};
+
+Screens.vetHome = ()=> `
+  ${topbar({eyebrow:'Assalamu alaikum, Dr. Nasrin', title:'Advisory dashboard', right:`<button class="iconbtn" onclick="go('notifications')">${ic('bell',19)}</button>`})}
+  <div class="section" style="padding-top:16px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="card"><div class="chip bad">${ic('alert',12)} Urgent</div><div style="font-family:'Fraunces'; font-size:22px; font-weight:600; margin-top:8px;">2</div><div class="fs11 muted">Need checkup today</div></div>
+      <div class="card"><div class="chip warn">${ic('syringe',12)} Due</div><div style="font-family:'Fraunces'; font-size:22px; font-weight:600; margin-top:8px;">5</div><div class="fs11 muted">Vaccinations this week</div></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h3>Priority cases</h3></div>
+    <div class="card" style="border-left:4px solid var(--danger);" onclick="go('cowDetail', {selectedCow:'BD-009'})">
+      <div class="row between">
+        <div class="row"><div class="avatar">🐄</div><div><div class="fw8 fs13">Moti · BD‑009</div><div class="muted fs11">Sudden milk drop, low appetite</div></div></div>
+        ${ic('chevR',16)}
+      </div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <div class="section-head"><h3>Upcoming vaccinations</h3><a onclick="go('vaccination')">Manage</a></div>
+    <div class="card"><div class="row between"><div><div class="fw8 fs13">Rupali · BD‑021</div><div class="muted fs11">FMD booster</div></div><span class="chip warn">Tomorrow</span></div></div>
+    <div class="card"><div class="row between"><div><div class="fw8 fs13">Herd · Sector B (8 cows)</div><div class="muted fs11">Deworming</div></div><span class="chip sky">5 Aug</span></div></div>
+  </div>`;
+
+Screens.notifications = ()=> `
+  ${topbar({title:'Smart alerts', back:true})}
+  <div class="section">
+    ${[
+      {ic:'alert', c:'var(--danger)', t:'Milk drop detected — Moti', d:'34% yield drop over 3 days. Possible early illness.', time:'12 min ago'},
+      {ic:'syringe', c:'var(--marigold-dark)', t:'Vaccination due — Rupali', d:'FMD booster scheduled for tomorrow.', time:'2 hr ago'},
+      {ic:'feed', c:'var(--sky)', t:'Feed stock low', d:'Only 6 days of dry feed remaining.', time:'5 hr ago'},
+      {ic:'trend', c:'var(--success)', t:'Weekly report ready', d:'Milk production up 6% vs last week.', time:'1 day ago'},
+    ].map(n=>`<div class="card"><div class="row" style="align-items:flex-start;"><div style="color:${n.c};">${ic(n.ic,20)}</div><div style="flex:1;"><div class="fw8 fs13">${n.t}</div><div class="muted fs12" style="margin-top:2px;">${n.d}</div><div class="fs11 muted" style="margin-top:6px;">${n.time}</div></div></div></div>`).join('')}
+  </div>`;
+
+/* ---------------- COWS ---------------- */
+Screens.cows = ()=> `
+  ${topbar({title:'Cow records', eyebrow:'24 cows on farm', right:`<button class="iconbtn" onclick="go('addCow')">${ic('plus',19)}</button>`})}
+  <div class="section" style="padding-top:14px;">
+    <div class="search-wrap"><span class="ic">${ic('search',17)}</span><input placeholder="Search by ID, breed, tag..."/></div>
+  </div>
+  <div class="tag-scroll">
+    <div class="tag active">All</div><div class="tag">Healthy</div><div class="tag">Vaccine due</div><div class="tag">Under treatment</div><div class="tag">By breed</div>
+  </div>
+  ${state.role==='owner' ? `
+  <div class="px" style="padding-top:10px;">
+    <div class="card" style="cursor:pointer; background:var(--paper); border:none;" onclick="go('profitability')">
+      <div class="row between"><div class="row"><div style="color:var(--forest-soft);">${ic('trend',18)}</div><div class="fw7 fs13">View herd profitability ranking</div></div>${ic('chevR',16)}</div>
+    </div>
+  </div>` : ''}
+  <div class="section" style="padding-top:12px; padding-bottom:20px;">
+    ${COWS.map(c=>`
+      <div class="card" onclick="go('cowDetail',{selectedCow:'${c.id}'})" style="cursor:pointer;">
+        <div class="row">
+          <div class="avatar lg">${c.photo}</div>
+          <div style="flex:1;">
+            <div class="row between"><div class="fw8" style="font-family:'Fraunces'; font-size:15.5px;">${c.name}</div><span class="chip ${c.tag}">${c.status}</span></div>
+            <div class="muted fs12" style="margin-top:2px;">${c.id} · ${c.breed}</div>
+            <div class="row" style="gap:14px; margin-top:8px;">
+              <div class="fs11 muted">${ic('droplet',12)} <span class="fw7" style="color:var(--soil);">${c.milk}</span>/day</div>
+              <div class="fs11 muted">Age <span class="fw7" style="color:var(--soil);">${c.age}</span></div>
+              <div class="fs11 muted">Wt <span class="fw7" style="color:var(--soil);">${c.weight}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+
+Screens.addCow = ()=> `
+  ${topbar({title:'New cow profile', back:true})}
+  <div class="section">
+    <div class="card" style="display:flex; flex-direction:column; align-items:center; gap:10px; border-style:dashed;" onclick="toast('Camera opened')">
+      <div style="width:60px;height:60px;border-radius:16px;background:var(--paper); display:flex; align-items:center; justify-content:center; color:var(--forest-soft);">${ic('camera',26)}</div>
+      <div class="fw7 fs13">Take or upload a photo</div>
+      <div class="chip sky">${ic('star',11)} AI can auto-fill breed & est. weight</div>
+    </div>
+    <div class="field" style="margin-top:16px;"><label class="field-label">Name / nickname</label><input placeholder="e.g. Josna"/></div>
+    <div class="field"><label class="field-label">ID tag</label><input placeholder="e.g. BD-042"/></div>
+    <div class="row" style="gap:12px;">
+      <div class="field" style="flex:1;"><label class="field-label">Breed</label><input placeholder="AI suggested: Sahiwal"/></div>
+      <div class="field" style="flex:1;"><label class="field-label">Age</label><input placeholder="years"/></div>
+    </div>
+    <div class="row" style="gap:12px;">
+      <div class="field" style="flex:1;"><label class="field-label">Weight (kg)</label><input placeholder="AI est: 298 kg"/></div>
+      <div class="field" style="flex:1;"><label class="field-label">Ownership</label><select><option>Owned</option><option>Leased</option></select></div>
+    </div>
+    <button class="btn btn-primary" onclick="toast('Cow profile saved'); go('cows')">Save profile</button>
+  </div>`;
+
+Screens.cowDetail = ()=>{
+  const c = COWS.find(x=>x.id===state.selectedCow) || COWS[0];
+  const stages = [
+    {t:'Birth', d:'12 May 2023', icon:'flag'},
+    {t:'Weaning', d:'Aug 2023', icon:'leaf'},
+    {t:'First breeding', d:'Mar 2024', icon:'heart'},
+    {t:'Milk production started', d:'Dec 2024', icon:'droplet'},
+    {t:'Current stage', d:'Lactating · Peak yield', icon:'trend'},
+  ];
+  return `
+  ${topbar({title:c.name+' · '+c.id, back:true, right:`<button class="iconbtn" onclick="go('addCow')">${ic('edit',17)}</button>`})}
+  <div class="section" style="padding-top:16px;">
+    <div class="row" style="gap:14px;">
+      <div class="avatar lg" style="width:76px;height:76px;font-size:34px;">${c.photo}</div>
+      <div style="flex:1;">
+        <div style="font-family:'Fraunces'; font-size:19px; font-weight:600;">${c.name}</div>
+        <div class="muted fs12">${c.breed}</div>
+        <span class="chip ${c.tag}" style="margin-top:6px;">${c.status}</span>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:16px;">
+      <div class="card" style="padding:11px; text-align:center;"><div class="fs11 muted">Age</div><div class="fw8 fs13">${c.age}</div></div>
+      <div class="card" style="padding:11px; text-align:center;"><div class="fs11 muted">Weight</div><div class="fw8 fs13">${c.weight}</div></div>
+      <div class="card" style="padding:11px; text-align:center;"><div class="fs11 muted">Milk/day</div><div class="fw8 fs13">${c.milk}</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><h3>Life‑cycle timeline</h3></div>
+    <div class="card">
+      ${stages.map((s,i)=>`
+        <div class="row" style="align-items:flex-start; gap:12px; ${i<stages.length-1?'margin-bottom:16px;':''} position:relative;">
+          <div style="width:34px;height:34px;border-radius:10px;background:${i===stages.length-1?'var(--marigold)':'var(--paper)'};color:${i===stages.length-1?'#fff':'var(--forest)'};display:flex;align-items:center;justify-content:center;flex-shrink:0; z-index:2;">${ic(s.icon,16)}</div>
+          ${i<stages.length-1?`<div style="position:absolute; left:16.5px; top:34px; width:1.5px; height:32px; background:var(--line);"></div>`:''}
+          <div><div class="fw8 fs13">${s.t}</div><div class="muted fs11">${s.d}</div></div>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="section" style="padding-bottom:22px;">
+    <div class="section-head"><h3>Recent milk yield</h3></div>
+    <div class="card">${lineChart([12.1,11.8,10.9,11.2,10.4,9.6,9.8],327,90,'var(--sky)')}</div>
+    <button class="btn btn-outline" style="margin-top:12px;" onclick="go('health')">View health & vaccination records</button>
+  </div>
+
+  ${state.role==='owner' ? `
+  <div class="section" style="padding-bottom:22px;">
+    <div class="section-head"><h3>Profitability</h3><a onclick="go('profitability')">Full ranking</a></div>
+    <div class="card">
+      <div class="row between"><span class="muted fs12">Revenue / day</span><span class="fw8 num">৳${c.revenue}</span></div>
+      <div class="row between" style="margin-top:6px;"><span class="muted fs12">Feed + medicine cost</span><span class="fw8 num" style="color:var(--danger);">− ৳${c.feedCost+c.medCost}</span></div>
+      <div class="divider"></div>
+      <div class="row between"><span class="fw8">Net profit / day</span><span class="fw8 num" style="font-size:16px; color:${cowProfit(c)>=0?'var(--success)':'var(--danger)'};">৳${cowProfit(c)}</span></div>
+      <div class="fs11 muted" style="margin-top:4px;">${c.note}</div>
+    </div>
+  </div>` : ''}
+  `;
+};
+
+/* ---------------- COW PROFITABILITY (owner) ---------------- */
+Screens.profitability = ()=>{
+  const ranked = [...COWS].sort((a,b)=>cowProfit(b)-cowProfit(a));
+  const totalProfit = ranked.reduce((s,c)=>s+cowProfit(c),0);
+  const totalRevenue = ranked.reduce((s,c)=>s+c.revenue,0);
+  return `
+  ${topbar({title:'Herd profitability', back:true, eyebrow:'Ranked by net profit / day'})}
+  <div class="section" style="padding-top:16px;">
+    <div class="card" style="background:var(--forest); color:#fff; border:none;">
+      <div class="row between">
+        <div><div class="fs11" style="opacity:0.75; text-transform:uppercase; font-weight:700;">Herd net profit / day</div>
+        <div style="font-family:'Fraunces'; font-size:26px; font-weight:600; margin-top:4px;" class="num">৳${totalProfit}</div></div>
+        <div style="text-align:right;"><div class="fs11" style="opacity:0.7;">Revenue</div><div class="fw8 num">৳${totalRevenue}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <div class="section-head"><h3>Cow-wise ranking</h3></div>
+    ${ranked.map((c,i)=>{
+      const profit = cowProfit(c); const margin = cowMargin(c);
+      return `
+      <div class="card" onclick="go('cowDetail',{selectedCow:'${c.id}'})" style="cursor:pointer;">
+        <div class="row between">
+          <div class="row" style="gap:10px;">
+            <div class="avatar" style="width:30px;height:30px;font-size:12px;background:${i===0?'var(--marigold-light)':'var(--paper)'};color:${i===0?'var(--marigold-dark)':'var(--soil-light)'};">#${i+1}</div>
+            <div><div class="fw8 fs13">${c.name} <span class="muted fs11" style="font-weight:600;">· ${c.id}</span></div>
+            <div class="muted fs11">Revenue ৳${c.revenue} − cost ৳${c.feedCost+c.medCost}</div></div>
+          </div>
+          <div style="text-align:right;">
+            <div class="fw8 num" style="color:${profit>=0?'var(--success)':'var(--danger)'};">৳${profit}</div>
+            ${margin!==null?`<div class="fs11 muted">${margin}% margin</div>`:`<div class="fs11 muted">growth phase</div>`}
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="section" style="padding-bottom:22px;">
+    <div class="card" style="background:var(--marigold-light); border:none;"><div class="row" style="align-items:flex-start; gap:8px;"><div style="color:var(--marigold-dark);">${ic('star',16)}</div><div class="fs12" style="line-height:1.5;">AI insight: Moti's profit dropped due to ongoing treatment cost — expected to recover once healthy. Kajol is a growth-phase heifer, not yet producing milk.</div></div></div>
+  </div>`;
+};
+
+/* ---------------- MILK ---------------- */
+Screens.milkAnalytics = ()=> `
+  ${topbar({title:'Milk production analytics', back:true})}
+  <div class="section" style="padding-top:16px;">
+    <div class="tag-scroll" style="padding:0 0 4px;"><div class="tag active">Daily</div><div class="tag">Weekly</div><div class="tag">Monthly</div></div>
+  </div>
+  <div class="section">
+    <div class="card">
+      <div class="row between"><div class="fw8 fs13">Farm total</div><span class="chip good">▲ 6%</span></div>
+      <div style="font-family:'Fraunces'; font-size:26px; font-weight:600; margin-top:6px;" class="num">38.4 L</div>
+      ${lineChart([31,34,29,36,33,35,38.4],327,120)}
+      <div class="row between fs11 muted" style="margin-top:4px;"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h3>AI insight</h3></div>
+    <div class="card" style="border-left:4px solid var(--forest-soft);">
+      <div class="row" style="align-items:flex-start;"><div style="color:var(--forest-soft);">${ic('star',18)}</div>
+      <div class="fs13" style="line-height:1.5;">Yield is trending up with the new feed mix. Cows <b>BD‑014</b> and <b>BD‑031</b> are your top performers this week. <b>BD‑009</b> is dragging the average down — see alert.</div></div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:22px;">
+    <div class="section-head"><h3>Log today's yield</h3></div>
+    ${COWS.slice(0,3).map(c=>`
+      <div class="card">
+        <div class="row between">
+          <div class="row"><div class="avatar">${c.photo}</div><div><div class="fw8 fs13">${c.name}</div><div class="muted fs11">${c.id}</div></div></div>
+          <div class="row" style="gap:8px;">
+            <button class="iconbtn" style="background:var(--paper); color:var(--soil);">${ic('minus',15)}</button>
+            <div class="num fw8" style="width:34px; text-align:center;">${c.milk!=='—'?c.milk.replace(' L',''):'0'}</div>
+            <button class="iconbtn" style="background:var(--paper); color:var(--soil);">${ic('plus',15)}</button>
+          </div>
+        </div>
+      </div>`).join('')}
+    <button class="btn btn-primary" style="margin-top:6px;" onclick="toast('Milk yield saved')">Save entries</button>
+  </div>`;
+
+/* ---------------- HEALTH ---------------- */
+Screens.health = ()=> `
+  ${topbar({title:'Health & vaccination', eyebrow: state.role==='vet'?'Advisory panel':'Herd health'})}
+  <div class="tag-scroll" style="padding-top:14px;"><div class="tag active">Records</div><div class="tag">Vaccinations</div><div class="tag">Treatments</div></div>
+  <div class="section" style="padding-top:12px;">
+    <div class="card" style="border-left:4px solid var(--danger);" onclick="go('cowDetail',{selectedCow:'BD-009'})">
+      <div class="row between">
+        <div class="row"><div class="avatar">🐄</div><div><div class="fw8 fs13">Moti · BD‑009</div><div class="muted fs11">Reduced appetite, fever suspected</div></div></div>
+        <span class="chip bad">Under treatment</span>
+      </div>
+      <div class="divider"></div>
+      <div class="fs12 muted">Last note: <span style="color:var(--soil);">Started antibiotic course, day 2 of 5. Recheck temperature tomorrow.</span></div>
+    </div>
+    <div class="card" onclick="go('cowDetail',{selectedCow:'BD-021'})">
+      <div class="row between">
+        <div class="row"><div class="avatar">🐄</div><div><div class="fw8 fs13">Rupali · BD‑021</div><div class="muted fs11">FMD booster due</div></div></div>
+        <span class="chip warn">Due tomorrow</span>
+      </div>
+    </div>
+    <div class="card" onclick="go('cowDetail',{selectedCow:'BD-014'})">
+      <div class="row between">
+        <div class="row"><div class="avatar">🐄</div><div><div class="fw8 fs13">Josna · BD‑014</div><div class="muted fs11">Routine checkup — all clear</div></div></div>
+        <span class="chip good">Healthy</span>
+      </div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:16px;">
+    <div class="section-head"><h3>AI risk alerts</h3></div>
+    <div class="card" style="border-left:4px solid var(--marigold-dark);">
+      <div class="row" style="align-items:flex-start;"><div style="color:var(--marigold-dark);">${ic('star',18)}</div>
+      <div class="fs13" style="line-height:1.5;">3 cows in Sector B are due for deworming within 5 days. Grouping them into one visit saves an estimated 2 hours.</div></div>
+    </div>
+  </div>
+  ${state.role!=='customer' ? `<div class="section" style="padding-bottom:20px;"><button class="btn btn-primary" onclick="go('vaccination')">${ic('syringe',16)} Schedule vaccination</button></div>`:''}
+  `;
+
+Screens.vaccination = ()=> `
+  ${topbar({title:'Vaccination scheduler', back:true})}
+  <div class="section" style="padding-top:16px;">
+    <div class="field"><label class="field-label">Apply to</label><select><option>Individual cow — Rupali (BD‑021)</option><option>Entire herd</option><option>Custom group</option></select></div>
+    <div class="field"><label class="field-label">Vaccine</label><select><option>FMD booster</option><option>Anthrax</option><option>Deworming</option><option>Haemorrhagic Septicaemia</option></select></div>
+    <div class="row" style="gap:12px;">
+      <div class="field" style="flex:1;"><label class="field-label">Date</label><input value="03 Aug 2026"/></div>
+      <div class="field" style="flex:1;"><label class="field-label">Time</label><input value="9:00 AM"/></div>
+    </div>
+    <div class="field"><label class="field-label">Notes for farm worker</label><textarea rows="3" placeholder="Any prep instructions..."></textarea></div>
+    <button class="btn btn-primary" onclick="toast('Vaccination scheduled'); go('health')">Schedule & notify</button>
+  </div>`;
+
+Screens.calendar = ()=> `
+  ${topbar({title:"This week's schedule", eyebrow:'Veterinary calendar'})}
+  <div class="section" style="padding-top:16px;">
+    ${['Mon 3','Tue 4','Wed 5'].map((d,i)=>`
+      <div class="section-head" style="padding:0; margin:${i?'18px':'0'} 0 8px;"><h3>${d} August</h3></div>
+      <div class="card"><div class="row between"><div class="row"><div style="color:var(--marigold-dark);">${ic('syringe',18)}</div><div><div class="fw8 fs13">Rupali — FMD booster</div><div class="muted fs11">Rupganj Dairy Farm</div></div></div><span class="fs12 fw8">9:00 AM</span></div></div>
+    `).join('')}
+  </div>`;
+
+/* ---------------- TEAM & TASKS (owner) ---------------- */
+Screens.team = ()=>{
+  const filter = state.taskFilter;
+  const filtered = filter==='all' ? TASKS : TASKS.filter(t=>t.status===filter);
+  const statusMeta = {done:{chip:'good',label:'Done'}, pending:{chip:'warn',label:'Pending'}, upcoming:{chip:'sky',label:'Upcoming'}};
+  return `
+  ${topbar({title:'Team & tasks', eyebrow:'Rupganj Dairy Farm', right:`<button class="iconbtn" onclick="go('assignTask')">${ic('plus',19)}</button>`})}
+  <div class="section" style="padding-top:16px; padding-bottom:6px;">
+    <div class="section-head"><h3>Workers</h3></div>
+    ${WORKERS.map(w=>`
+      <div class="card" onclick="go('workerDetail',{selectedWorker:'${w.id}'})" style="cursor:pointer;">
+        <div class="row between">
+          <div class="row"><div class="avatar round">${w.avatar}</div>
+            <div><div class="fw8 fs13">${w.name}</div><div class="muted fs11">${w.role} · active ${w.lastActive}</div></div>
+          </div>
+          <span class="chip ${w.status==='active'?'good':'warn'}">${w.tasksDone}/${w.tasksToday} tasks</span>
+        </div>
+      </div>`).join('')}
+  </div>
+  <div class="section" style="padding-top:6px;">
+    <div class="section-head"><h3>Today's tasks</h3></div>
+    <div class="tag-scroll" style="padding-left:0; padding-right:0;">
+      ${[['all','All'],['pending','Pending'],['upcoming','Upcoming'],['done','Done']].map(([k,l])=>`<div class="tag ${filter===k?'active':''}" onclick="state.taskFilter='${k}'; render();">${l}</div>`).join('')}
+    </div>
+  </div>
+  <div class="section" style="padding-top:10px; padding-bottom:22px;">
+    ${filtered.length? filtered.map(t=>{
+      const w = WORKERS.find(x=>x.id===t.assignee); const sm = statusMeta[t.status];
+      return `
+      <div class="card">
+        <div class="row between">
+          <div class="row"><div class="avatar" style="width:32px;height:32px;font-size:11px;">${w?w.avatar:'?'}</div>
+            <div><div class="fw7 fs13">${t.title}</div><div class="muted fs11">${w?w.name:'Unassigned'} · Due ${t.due}</div></div>
+          </div>
+          <span class="chip ${sm.chip}">${sm.label}</span>
+        </div>
+      </div>`;
+    }).join('') : `<div class="empty">${ic('check',36,1.4)}<div class="fw8 fs13" style="margin-top:6px;">No tasks in this filter</div></div>`}
+  </div>`;
+};
+
+Screens.workerDetail = ()=>{
+  const w = WORKERS.find(x=>x.id===state.selectedWorker) || WORKERS[0];
+  const wTasks = TASKS.filter(t=>t.assignee===w.id);
+  const statusMeta = {done:{chip:'good',label:'Done'}, pending:{chip:'warn',label:'Pending'}, upcoming:{chip:'sky',label:'Upcoming'}};
+  return `
+  ${topbar({title:w.name, back:true})}
+  <div class="section" style="padding-top:16px;">
+    <div class="row" style="gap:14px;">
+      <div class="avatar round lg">${w.avatar}</div>
+      <div style="flex:1;">
+        <div style="font-family:'Fraunces'; font-size:18px; font-weight:600;">${w.name}</div>
+        <div class="muted fs12">${w.role}</div>
+        <span class="chip ${w.status==='active'?'good':'warn'}" style="margin-top:6px;">${w.status==='active'?'On track':'Behind schedule'}</span>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px;">
+      <div class="card" style="padding:11px; text-align:center;"><div class="fs11 muted">Tasks today</div><div class="fw8 fs15">${w.tasksDone}/${w.tasksToday}</div></div>
+      <div class="card" style="padding:11px; text-align:center;"><div class="fs11 muted">Last active</div><div class="fw8 fs13">${w.lastActive}</div></div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <div class="section-head"><h3>Accountability log</h3></div>
+    ${wTasks.length ? wTasks.map(t=>{
+      const sm = statusMeta[t.status];
+      return `<div class="card"><div class="row between"><div><div class="fw7 fs13">${t.title}</div><div class="muted fs11">Due ${t.due}</div></div><span class="chip ${sm.chip}">${sm.label}</span></div></div>`;
+    }).join('') : `<div class="empty">${ic('check',36,1.4)}<div class="fw8 fs13" style="margin-top:6px;">No tasks logged</div></div>`}
+  </div>
+  <div class="section" style="padding-bottom:22px;">
+    <button class="btn btn-outline" onclick="go('assignTask',{selectedWorker:'${w.id}'})">${ic('plus',16)} Assign new task to ${w.name.split(' ')[0]}</button>
+  </div>`;
+};
+
+Screens.assignTask = ()=> `
+  ${topbar({title:'Assign task', back:true})}
+  <div class="section">
+    <div class="field"><label class="field-label">Task</label><input placeholder="e.g. Evening milking — Sector A"/></div>
+    <div class="field"><label class="field-label">Assign to</label>
+      <select>${WORKERS.map(w=>`<option ${state.selectedWorker===w.id?'selected':''}>${w.name} — ${w.role}</option>`).join('')}</select>
+    </div>
+    <div class="row" style="gap:12px;">
+      <div class="field" style="flex:1;"><label class="field-label">Due date</label><input value="Today"/></div>
+      <div class="field" style="flex:1;"><label class="field-label">Time</label><input value="5:30 PM"/></div>
+    </div>
+    <div class="field"><label class="field-label">Notes</label><textarea rows="3" placeholder="Any instructions..."></textarea></div>
+    <button class="btn btn-primary" onclick="toast('Task assigned'); go('team')">Assign task</button>
+  </div>`;
+
+/* ---------------- FEED ---------------- */
+Screens.feed = ()=> `
+  ${topbar({title:'Feed management'})}
+  <div class="section" style="padding-top:16px;">
+    <div class="card">
+      <div class="row between"><div class="fw8 fs14">Dry feed stock</div><span class="chip warn">6 days left</span></div>
+      <div class="barTrack" style="margin-top:10px;"><div class="barFill" style="width:22%; background:var(--marigold-dark);"></div></div>
+      <div class="fs11 muted" style="margin-top:6px;">180 kg remaining of 800 kg capacity</div>
+    </div>
+    <div class="card">
+      <div class="row between"><div class="fw8 fs14">Green fodder</div><span class="chip good">18 days left</span></div>
+      <div class="barTrack" style="margin-top:10px;"><div class="barFill" style="width:64%;"></div></div>
+      <div class="fs11 muted" style="margin-top:6px;">640 kg remaining of 1000 kg capacity</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h3>AI feeding recommendation</h3></div>
+    <div class="card" style="border-left:4px solid var(--forest-soft);">
+      <div class="row" style="align-items:flex-start;"><div style="color:var(--forest-soft);">${ic('star',18)}</div>
+      <div class="fs13" style="line-height:1.5;">Increase concentrate feed by 0.5 kg/day for <b>Josna</b> and <b>Kajol</b> — both are in peak lactation and under their optimal intake for current milk yield targets.</div></div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:22px;">
+    <div class="section-head"><h3>Today's feeding log</h3><a onclick="go('addFeed')">+ Add entry</a></div>
+    <div class="card"><div class="row between"><div><div class="fw8 fs13">Morning ration</div><div class="muted fs11">All herd · 6:30 AM</div></div><span class="chip good">${ic('check',11)} Done</span></div></div>
+    <div class="card"><div class="row between"><div><div class="fw8 fs13">Evening ration</div><div class="muted fs11">All herd · 5:30 PM</div></div><span class="chip warn">Pending</span></div></div>
+  </div>`;
+
+Screens.addFeed = ()=> `
+  ${topbar({title:'Log feed entry', back:true})}
+  <div class="section">
+    <div class="field"><label class="field-label">Feed type</label><select><option>Dry feed (straw)</option><option>Green fodder</option><option>Concentrate mix</option></select></div>
+    <div class="field"><label class="field-label">Quantity (kg)</label><input value="80"/></div>
+    <div class="field"><label class="field-label">Applied to</label><select><option>Entire herd</option><option>Individual cow</option></select></div>
+    <button class="btn btn-primary" onclick="toast('Feed entry logged'); go('feed')">Save entry</button>
+  </div>`;
+
+/* ---------------- FINANCE ---------------- */
+Screens.finance = ()=> `
+  ${topbar({title:'Financial management'})}
+  <div class="section" style="padding-top:16px;">
+    <div class="card" style="background:var(--forest); color:#fff; border:none;">
+      <div class="fs11" style="opacity:0.75; text-transform:uppercase; font-weight:700;">Net profit — this month</div>
+      <div style="font-family:'Fraunces'; font-size:28px; font-weight:600; margin-top:4px;" class="num">৳ 18,420</div>
+      <div class="row" style="gap:16px; margin-top:12px;">
+        <div><div class="fs11" style="opacity:0.7;">Income</div><div class="fw8 num">৳52,100</div></div>
+        <div><div class="fs11" style="opacity:0.7;">Expense</div><div class="fw8 num">৳33,680</div></div>
+        <div><div class="fs11" style="opacity:0.7;">Margin</div><div class="fw8 num">35%</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="card">${barChart([12,15,9,18,14,20,18],['W1','W2','W3','W4','W5','W6','W7'])}</div>
+  </div>
+  <div class="section">
+    <div class="card" style="cursor:pointer;" onclick="go('costBreakdown')">
+      <div class="row between">
+        <div><div class="fs11 muted" style="text-transform:uppercase; font-weight:700; letter-spacing:0.5px;">Cost per litre of milk</div>
+        <div style="font-family:'Fraunces'; font-size:22px; font-weight:600; margin-top:4px;" class="num">৳47.30<span class="fs12 muted" style="font-family:'Manrope'; font-weight:600;"> / L</span></div></div>
+        <div class="row" style="gap:8px;"><span class="chip good">৳32.70 margin</span>${ic('chevR',16)}</div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h3>AI forecast</h3></div>
+    <div class="card" style="border-left:4px solid var(--forest-soft);">
+      <div class="row" style="align-items:flex-start;"><div style="color:var(--forest-soft);">${ic('trend',18)}</div>
+      <div class="fs13" style="line-height:1.5;">Projected profit for August: <b>৳21,000–23,500</b>, driven by rising milk yield and stable feed costs.</div></div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <div class="section-head"><h3>Recent transactions</h3><a onclick="go('addTxn')">+ Add</a></div>
+    ${[
+      {t:'Milk sale — bulk buyer', a:'+ ৳4,200', c:'var(--success)', icon:'droplet'},
+      {t:'Feed purchase — dry straw', a:'− ৳1,850', c:'var(--danger)', icon:'feed'},
+      {t:'Ghee sale — 6 jars', a:'+ ৳3,900', c:'var(--success)', icon:'package'},
+      {t:'Vet consultation', a:'− ৳600', c:'var(--danger)', icon:'heart'},
+    ].map(x=>`<div class="card"><div class="row between"><div class="row"><div style="color:${x.c};">${ic(x.icon,18)}</div><div class="fw7 fs13">${x.t}</div></div><div class="fw8 num" style="color:${x.c};">${x.a}</div></div></div>`).join('')}
+  </div>`;
+
+Screens.addTxn = ()=> `
+  ${topbar({title:'Add transaction', back:true})}
+  <div class="section">
+    <div class="row" style="gap:10px; margin-bottom:16px;">
+      <button class="btn btn-primary sm" style="flex:1;">Income</button>
+      <button class="btn btn-ghost sm" style="flex:1;">Expense</button>
+    </div>
+    <div class="field"><label class="field-label">Category</label><select><option>Milk sales</option><option>Product sales</option><option>Feed</option><option>Medicine</option><option>Labor</option><option>Other</option></select></div>
+    <div class="field"><label class="field-label">Amount (৳)</label><input value=""/></div>
+    <div class="field"><label class="field-label">Note</label><input placeholder="Optional"/></div>
+    <button class="btn btn-primary" onclick="toast('Transaction recorded'); go('finance')">Save</button>
+  </div>`;
+
+/* ---------------- COST PER LITRE (owner) ---------------- */
+Screens.costBreakdown = ()=>{
+  const rows = [
+    {label:'Feed', amount:26.10, color:'var(--marigold-dark)'},
+    {label:'Labor', amount:11.40, color:'var(--sky)'},
+    {label:'Medicine & vet', amount:6.80, color:'var(--danger)'},
+    {label:'Other (water, power, misc)', amount:3.00, color:'var(--soil-light)'},
+  ];
+  const totalCost = rows.reduce((s,r)=>s+r.amount,0);
+  const sellPrice = 80;
+  const margin = sellPrice-totalCost;
+  return `
+  ${topbar({title:'Cost per litre', back:true, eyebrow:'Based on last 30 days farm data'})}
+  <div class="section" style="padding-top:16px;">
+    <div class="card" style="background:var(--forest); color:#fff; border:none;">
+      <div class="row between">
+        <div><div class="fs11" style="opacity:0.75; text-transform:uppercase; font-weight:700;">Cost / litre</div><div style="font-family:'Fraunces'; font-size:26px; font-weight:600; margin-top:4px;" class="num">৳${totalCost.toFixed(2)}</div></div>
+        <div><div class="fs11" style="opacity:0.75; text-transform:uppercase; font-weight:700;">Sell price</div><div style="font-family:'Fraunces'; font-size:26px; font-weight:600; margin-top:4px;" class="num">৳${sellPrice.toFixed(2)}</div></div>
+        <div><div class="fs11" style="opacity:0.75; text-transform:uppercase; font-weight:700;">Margin</div><div style="font-family:'Fraunces'; font-size:26px; font-weight:600; margin-top:4px;" class="num">৳${margin.toFixed(2)}</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:8px;">
+    <div class="section-head"><h3>Cost breakdown</h3></div>
+    <div class="card">
+      ${rows.map(r=>`
+        <div style="margin-bottom:12px;">
+          <div class="row between fs12" style="margin-bottom:5px;"><span class="fw7">${r.label}</span><span class="fw8 num">৳${r.amount.toFixed(2)}/L</span></div>
+          <div class="barTrack"><div class="barFill" style="width:${(r.amount/totalCost*100).toFixed(0)}%; background:${r.color};"></div></div>
+        </div>`).join('')}
+      <div class="divider"></div>
+      <div class="row between"><span class="fw8">Total cost</span><span class="fw8 num">৳${totalCost.toFixed(2)} / L</span></div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:22px;">
+    <div class="card" style="background:var(--marigold-light); border:none;"><div class="row" style="align-items:flex-start; gap:8px;"><div style="color:var(--marigold-dark);">${ic('star',16)}</div><div class="fs12" style="line-height:1.5;">AI insight: feed is 55% of your per-litre cost. A 10% feed-efficiency improvement (via optimized rationing) could raise margin to ~৳35.30/L.</div></div></div>
+  </div>`;
+};
+
+/* ---------------- DAIRY PRODUCTS (owner) ---------------- */
+Screens.products = ()=> `
+  ${topbar({title:'Dairy product management', right:`<button class="iconbtn" onclick="toast('Add product form')">${ic('plus',18)}</button>`})}
+  <div class="section" style="padding-top:16px;">
+    ${PRODUCTS.map(p=>`
+      <div class="card"><div class="row between">
+        <div class="row"><div class="avatar" style="font-size:22px;">${p.emoji}</div><div><div class="fw8 fs13">${p.name}</div><div class="muted fs11">${p.unit} · ৳${p.price}</div></div></div>
+        <div style="text-align:right;"><div class="fs11 ${p.stock.includes('9')?'':'muted'}" style="color:${p.stock.startsWith('9')?'var(--marigold-dark)':'var(--soil-light)'}; font-weight:700;">${p.stock}</div><button class="btn btn-ghost sm" style="margin-top:6px;">Update</button></div>
+      </div></div>`).join('')}
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <div class="section-head"><h3>Sales this week</h3></div>
+    <div class="card">${barChart([8,12,7,15,10,18,14],['M','T','W','T','F','S','S'],327,100,'var(--sky)')}</div>
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <div class="card" style="cursor:pointer;" onclick="go('waste')">
+      <div class="row between"><div class="row"><div style="color:var(--forest-soft);">${ic('leaf',18)}</div><div class="fw7 fs13">Waste & biogas management</div></div>${ic('chevR',16)}</div>
+    </div>
+  </div>`;
+
+/* ---------------- WASTE ---------------- */
+Screens.waste = ()=> `
+  ${topbar({title:'Waste management', back:true})}
+  <div class="section" style="padding-top:16px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="card"><div class="chip good">${ic('leaf',12)} Biogas</div><div style="font-family:'Fraunces'; font-size:20px; font-weight:600; margin-top:8px;">86 m³</div><div class="fs11 muted">Generated this month</div></div>
+      <div class="card"><div class="chip sky">${ic('package',12)} Compost</div><div style="font-family:'Fraunces'; font-size:20px; font-weight:600; margin-top:8px;">340 kg</div><div class="fs11 muted">Produced this month</div></div>
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <div class="section-head"><h3>Daily waste log</h3><a onclick="toast('Entry added')">+ Add</a></div>
+    <div class="card"><div class="row between"><div class="fw7 fs13">Today, 6:00 AM</div><div class="fw8">210 kg · Mixed</div></div></div>
+    <div class="card"><div class="row between"><div class="fw7 fs13">Yesterday, 6:10 AM</div><div class="fw8">198 kg · Mixed</div></div></div>
+  </div>`;
+
+/* ---------------- REPORTS ---------------- */
+Screens.reports = ()=> `
+  ${topbar({title:'Reports & analytics'})}
+  <div class="tag-scroll" style="padding-top:14px;"><div class="tag active">Overview</div><div class="tag">Milk</div><div class="tag">Health</div><div class="tag">Finance</div><div class="tag" onclick="go('waste')">Waste</div></div>
+  <div class="section" style="padding-top:12px;">
+    <div class="card">
+      <div class="row between"><div class="fw8 fs14">Farm performance score</div><span class="chip good">Strong</span></div>
+      <div style="display:flex; align-items:center; gap:16px; margin-top:12px;">
+        <svg width="76" height="76" viewBox="0 0 76 76">
+          <circle cx="38" cy="38" r="32" stroke="var(--paper)" stroke-width="9" fill="none"/>
+          <circle cx="38" cy="38" r="32" stroke="var(--forest)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="42" transform="rotate(-90 38 38)"/>
+          <text x="38" y="43" text-anchor="middle" font-size="18" font-weight="800" font-family="Fraunces" fill="var(--soil)">79</text>
+        </svg>
+        <div style="flex:1;" class="fs12 muted">Based on milk trend, herd health, feed efficiency and financial margin over the last 30 days.</div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-head"><h3>Milk production</h3></div>
+    <div class="card">${lineChart([210,224,198,236,241,255,268],327,90)}</div>
+  </div>
+  <div class="section" style="padding-bottom:24px;">
+    <div class="section-head"><h3>Downloadable reports</h3></div>
+    ${['Monthly farm summary — Jul 2026','Health & vaccination log — Q2 2026','Financial statement — Jul 2026'].map(r=>`
+      <div class="card"><div class="row between"><div class="row"><div style="color:var(--forest-soft);">${ic('chart',18)}</div><div class="fw7 fs13">${r}</div></div><button class="iconbtn" style="background:var(--paper); color:var(--soil);" onclick="toast('Report downloading')">${ic('download',16)}</button></div></div>
+    `).join('')}
+  </div>`;
+
+/* ---------------- MORE / PROFILE ---------------- */
+Screens.more = ()=>{
+  const ownerItems = state.role==='owner' ? [
+    {icon:'tag', t:'Team & tasks', s:'team'},
+    {icon:'trend', t:'Herd profitability', s:'profitability'},
+    {icon:'wallet', t:'Cost per litre', s:'costBreakdown'},
+    {icon:'leaf', t:'Waste & biogas', s:'waste'},
+  ] : [];
+  const items = [
+    {icon:'user', t:'Edit profile', s:'more'},
+    ...ownerItems,
+    {icon:'chat', t:'AI Farm Assistant', s:'assistant'},
+    {icon:'globe', t:'Language — বাংলা / English', s:'langScreen'},
+    {icon:'bell', t:'Notification settings', s:'notifications'},
+    {icon:'mail', t:'Send feedback', s:'feedback'},
+    {icon:'settings', t:'App settings', s:'more'},
+  ];
+  return `
+  ${topbar({title:'Profile & more'})}
+  <div class="section" style="padding-top:16px;">
+    <div class="card"><div class="row" style="gap:14px;">
+      <div class="avatar lg">KS</div>
+      <div style="flex:1;"><div style="font-family:'Fraunces'; font-size:17px; font-weight:600;">Karim Sheikh</div><div class="muted fs12">${ROLES[state.role]?.label||''} · Rupganj, Sirajganj</div></div>
+      <button class="iconbtn" style="background:var(--paper); color:var(--soil);" onclick="go('editProfile')">${ic('edit',16)}</button>
+    </div></div>
+  </div>
+  <div class="section" style="padding-bottom:8px;">
+    ${items.map(i=>`<div class="card" style="margin-bottom:10px; cursor:pointer;" onclick="go('${i.s}')"><div class="row between"><div class="row"><div style="color:var(--forest-soft);">${ic(i.icon,19)}</div><div class="fw7 fs13">${i.t}</div></div>${ic('chevR',16)}</div></div>`).join('')}
+  </div>
+  <div class="section" style="padding-bottom:24px;">
+    <button class="btn" style="background:var(--danger-light); color:var(--danger);" onclick="go('login',{role:null})">${ic('logout',16)} Log out</button>
+  </div>`;
+};
+
+Screens.editProfile = ()=> `
+  ${topbar({title:'Edit profile', back:true})}
+  <div class="section">
+    <div style="display:flex; justify-content:center; margin-bottom:18px;"><div class="avatar lg" style="width:80px;height:80px;font-size:26px;">KS</div></div>
+    <div class="field"><label class="field-label">Full name</label><input value="Karim Sheikh"/></div>
+    <div class="field"><label class="field-label">Mobile number</label><input value="+880 1712-345678"/></div>
+    <div class="field"><label class="field-label">Farm location</label><input value="Rupganj, Sirajganj"/></div>
+    <button class="btn btn-primary" onclick="toast('Profile updated'); go('more')">Save changes</button>
+  </div>`;
+
+Screens.langScreen = ()=> `
+  ${topbar({title:'Language', back:true})}
+  <div class="section">
+    <div class="roleCard ${state.lang==='en'?'':''}" style="margin-bottom:10px; ${state.lang==='en'?'border-color:var(--forest); background:var(--marigold-light);':''}" onclick="state.lang='en'; render();">
+      <div class="ic-box" style="background:var(--forest-soft);">${ic('globe',20)}</div>
+      <div style="flex:1;"><div class="fw8">English</div><div class="muted fs12">Default interface language</div></div>
+      ${state.lang==='en'?ic('check',18):''}
+    </div>
+    <div class="roleCard" style="${state.lang==='bn'?'border-color:var(--forest); background:var(--marigold-light);':''}" onclick="state.lang='bn'; render();">
+      <div class="ic-box" style="background:var(--forest-soft);">${ic('volume',20)}</div>
+      <div style="flex:1;"><div class="fw8">বাংলা (Bangla)</div><div class="muted fs12">AI advisory in Bangla text & voice</div></div>
+      ${state.lang==='bn'?ic('check',18):''}
+    </div>
+  </div>`;
+
+Screens.feedback = ()=> `
+  ${topbar({title:'Send feedback', back:true})}
+  <div class="section">
+    <div class="field"><label class="field-label">What's this about?</label><select><option>Suggestion</option><option>Bug / issue</option><option>Feature request</option><option>Other</option></select></div>
+    <div class="field"><label class="field-label">Tell us more</label><textarea rows="5" placeholder="Describe your feedback..."></textarea></div>
+    <button class="btn btn-primary" onclick="toast('Thanks for your feedback!'); go('more')">Submit feedback</button>
+  </div>`;
+
+/* ---------------- AI ASSISTANT ---------------- */
+const ASSISTANT_CONTENT = {
+  farm: {
+    title: 'AI Farm Assistant',
+    eyebrow: 'Ask anything about your farm',
+    hint: 'I can check milk trends, suggest feed changes, explain health alerts — in text or Bangla voice.',
+    convo: [
+      {from:'user', text:"Why did Moti's milk yield drop?"},
+      {from:'ai', text:"Moti's yield dropped 34% over 3 days along with reduced appetite — this pattern often signals early illness. I'd recommend a vet checkup today. Want me to notify Dr. Nasrin?"},
+      {from:'user', text:'Yes, please notify her'},
+      {from:'ai', text:'Done — Dr. Nasrin has been notified and Moti is flagged as a priority case. ✅'},
+    ],
+    placeholder: {en:'Type your question...', bn:'আপনার প্রশ্ন লিখুন...'},
+  },
+  customer: {
+    title: 'FarmFusion Assistant',
+    eyebrow: 'Ask about products & orders',
+    hint: 'I can recommend products, check your order status, and answer questions about our dairy items — in text or Bangla voice.',
+    convo: [
+      {from:'user', text:'Which yogurt is best for daily use?'},
+      {from:'ai', text:'Our Farm Yogurt (400g cup, ৳120) is a customer favourite — made fresh daily with no preservatives. Based on your past orders, you might also like Pure Ghee. Want me to add the yogurt to your cart?'},
+      {from:'user', text:'Yes, and when will my last order arrive?'},
+      {from:'ai', text:'Added! Your order #FF‑2291 is out for delivery and should arrive today between 5–7 PM. ✅'},
+    ],
+    placeholder: {en:'Ask about products or your order...', bn:'পণ্য বা অর্ডার নিয়ে জিজ্ঞাসা করুন...'},
+  }
+};
+Screens.assistant = ()=>{
+  const mode = state.role==='customer' ? 'customer' : 'farm';
+  const c = ASSISTANT_CONTENT[mode];
+  return `
+  ${topbar({title:c.title, eyebrow:c.eyebrow, right:`<button class="iconbtn" onclick="go('langScreen')">${ic('globe',18)}</button>`})}
+  <div class="section" style="padding-top:14px; padding-bottom:8px;">
+    <div class="card" style="background:var(--paper); border:none; display:flex; align-items:center; gap:10px;">
+      <div style="color:var(--forest-soft);">${ic('star',18)}</div>
+      <div class="fs12" style="line-height:1.4;">${c.hint}</div>
+    </div>
+  </div>
+  <div class="px" style="padding-bottom:14px;">
+    ${c.convo.map(m=> m.from==='user' ? `
+    <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+      <div style="background:var(--forest); color:#fff; padding:11px 14px; border-radius:15px 15px 4px 15px; max-width:80%; font-size:13.5px;">${m.text}</div>
+    </div>` : `
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <div class="avatar" style="width:30px;height:30px; flex-shrink:0;">${ic('chat',14)}</div>
+      <div style="background:var(--white); border:1px solid var(--line); padding:11px 14px; border-radius:15px 15px 15px 4px; max-width:80%; font-size:13.5px; line-height:1.5;">${m.text}</div>
+    </div>`).join('')}
+  </div>
+  <div class="px" style="padding-bottom:16px; position:sticky; bottom:0; background:var(--cream); padding-top:8px;">
+    <div class="row" style="gap:8px; background:var(--white); border:1.5px solid var(--line); border-radius:16px; padding:8px 8px 8px 16px;">
+      <input placeholder="${state.lang==='bn'?c.placeholder.bn:c.placeholder.en}" style="border:none; padding:6px 0;"/>
+      <button class="iconbtn" style="background:var(--paper); color:var(--forest);" onclick="toast('Listening...')">${ic('mic',17)}</button>
+      <button class="iconbtn" style="background:var(--marigold); color:var(--soil);">${ic('send',16)}</button>
+    </div>
+  </div>`;
+};
+
+/* ---------------- CUSTOMER: SHOP ---------------- */
+Screens.shop = ()=> `
+  ${topbar({eyebrow:'Deliver to Sirajganj Sadar', title:'FarmFusion Market', right:`<button class="iconbtn" onclick="go('cart')" style="position:relative;">${ic('cart',18)}${state.cart.length?`<span style="position:absolute;top:-3px;right:-3px;background:var(--marigold);color:var(--soil);font-size:9px;font-weight:800;border-radius:99px;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;">${state.cart.length}</span>`:''}</button>`})}
+  <div class="section" style="padding-top:14px;">
+    <div class="search-wrap"><span class="ic">${ic('search',17)}</span><input placeholder="Search milk, ghee, yogurt..."/></div>
+  </div>
+  <div class="tag-scroll"><div class="tag active">All</div><div class="tag">Milk</div><div class="tag">Ghee</div><div class="tag">Yogurt</div><div class="tag">Cheese</div></div>
+
+  <div class="section">
+    <div class="section-head"><h3>Recommended for you</h3><span class="chip sky">${ic('star',11)} AI picked</span></div>
+    <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:4px;">
+      ${PRODUCTS.slice(0,3).map(p=>`
+        <div class="card" style="min-width:132px; flex-shrink:0;" onclick="go('productDetail',{selectedProduct:'${p.id}'})">
+          <div style="font-size:30px; text-align:center; background:var(--paper); border-radius:12px; padding:12px 0;">${p.emoji}</div>
+          <div class="fw8 fs12" style="margin-top:8px;">${p.name}</div>
+          <div class="fs11 muted">${p.unit}</div>
+          <div class="fw8 fs13" style="margin-top:4px;">৳${p.price}</div>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="section" style="padding-bottom:22px;">
+    <div class="section-head"><h3>All products</h3></div>
+    ${PRODUCTS.map(p=>`
+      <div class="card"><div class="row between">
+        <div class="row" onclick="go('productDetail',{selectedProduct:'${p.id}'})" style="cursor:pointer;">
+          <div class="avatar" style="font-size:24px;">${p.emoji}</div>
+          <div><div class="fw8 fs13">${p.name}</div><div class="muted fs11">${p.unit} · ${p.stock}</div><div class="fw8 fs14" style="margin-top:2px;">৳${p.price}</div></div>
+        </div>
+        <button class="iconbtn" style="background:var(--marigold); color:var(--soil);" onclick="addToCart('${p.id}')">${ic('plus',16)}</button>
+      </div></div>`).join('')}
+  </div>`;
+
+Screens.productDetail = ()=>{
+  const p = PRODUCTS.find(x=>x.id===state.selectedProduct)||PRODUCTS[0];
+  return `
+  ${topbar({title:p.name, back:true})}
+  <div style="text-align:center; font-size:70px; padding:26px 0 10px; background:var(--paper);">${p.emoji}</div>
+  <div class="section">
+    <div class="row between"><div style="font-family:'Fraunces'; font-size:19px; font-weight:600;">${p.name}</div><span class="chip good">Fresh today</span></div>
+    <div class="muted fs12" style="margin-top:3px;">${p.unit} · ${p.stock}</div>
+    <div style="font-family:'Fraunces'; font-size:24px; font-weight:600; margin-top:10px;" class="num">৳${p.price}</div>
+    <div class="divider"></div>
+    <div class="fw8 fs13" style="margin-bottom:6px;">About this product</div>
+    <p class="fs13 muted" style="line-height:1.6;">Sourced fresh from Rupganj Dairy Farm, processed same-day for maximum freshness. No preservatives, traditional preparation methods.</p>
+  </div>
+  <div class="section">
+    <div class="section-head"><h3>You might also like</h3></div>
+    <div style="display:flex; gap:10px; overflow-x:auto;">
+      ${PRODUCTS.filter(x=>x.id!==p.id).map(x=>`<div class="card" style="min-width:110px; flex-shrink:0;" onclick="go('productDetail',{selectedProduct:'${x.id}'})"><div style="font-size:26px; text-align:center;">${x.emoji}</div><div class="fw7 fs11" style="margin-top:6px;">${x.name}</div><div class="fs11 muted">৳${x.price}</div></div>`).join('')}
+    </div>
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <button class="btn btn-marigold" onclick="addToCart('${p.id}'); toast('Added to cart')">${ic('cart',16)} Add to cart — ৳${p.price}</button>
+  </div>`;
+};
+
+function addToCart(id){ state.cart.push(id); render(); toast('Added to cart'); }
+
+Screens.cart = ()=>{
+  if(!state.cart.length){
+    return `${topbar({title:'Your cart'})}
+    <div class="empty">${ic('cart',48,1.3)}<div class="fw8" style="margin-top:6px;">Your cart is empty</div><p class="fs12" style="margin-top:6px;">Browse the market and add fresh dairy products.</p>
+    <button class="btn btn-primary" style="margin-top:18px;" onclick="go('shop')">Go to market</button></div>`;
+  }
+  const items = state.cart.map(id=>PRODUCTS.find(p=>p.id===id));
+  const grouped = {};
+  items.forEach(p=>{ grouped[p.id] = grouped[p.id] ? {...grouped[p.id], qty:grouped[p.id].qty+1} : {...p, qty:1}; });
+  const list = Object.values(grouped);
+  const subtotal = list.reduce((s,p)=>s+p.price*p.qty,0);
+  return `
+  ${topbar({title:'Your cart', eyebrow:list.length+' item(s)'})}
+  <div class="section" style="padding-top:14px;">
+    ${list.map(p=>`
+      <div class="card"><div class="row between">
+        <div class="row"><div class="avatar" style="font-size:22px;">${p.emoji}</div><div><div class="fw8 fs13">${p.name}</div><div class="muted fs11">৳${p.price} × ${p.qty}</div></div></div>
+        <div class="fw8 num">৳${p.price*p.qty}</div>
+      </div></div>`).join('')}
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <div class="card">
+      <div class="row between fs13"><span class="muted">Subtotal</span><span class="num">৳${subtotal}</span></div>
+      <div class="row between fs13" style="margin-top:6px;"><span class="muted">Delivery</span><span class="num">৳40</span></div>
+      <div class="row between fs13" style="margin-top:6px; color:var(--success);"><span class="fw7">AI loyalty discount</span><span class="num">− ৳25</span></div>
+      <div class="divider"></div>
+      <div class="row between"><span class="fw8">Total</span><span class="fw8 num" style="font-size:17px;">৳${subtotal+40-25}</span></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="go('checkout')">Proceed to checkout</button>
+  </div>`;
+};
+
+Screens.checkout = ()=>{
+  const items = state.cart.map(id=>PRODUCTS.find(p=>p.id===id));
+  const grouped = {}; items.forEach(p=>{ grouped[p.id] = grouped[p.id] ? {...grouped[p.id], qty:grouped[p.id].qty+1} : {...p, qty:1}; });
+  const subtotal = Object.values(grouped).reduce((s,p)=>s+p.price*p.qty,0);
+  return `
+  ${topbar({title:'Checkout', back:true})}
+  <div class="section" style="padding-top:14px;">
+    <div class="field"><label class="field-label">Delivery address</label><input value="House 12, Rupganj Road, Sirajganj Sadar"/></div>
+    <div class="field"><label class="field-label">Delivery slot</label><select><option>Today, 5–7 PM</option><option>Tomorrow, 8–10 AM</option></select></div>
+    <div class="field"><label class="field-label">Payment method</label>
+      <div class="roleCard" style="margin-bottom:8px; padding:12px;"><div class="ic-box" style="width:36px;height:36px; background:var(--forest-soft);">${ic('wallet',16)}</div><div class="fw7 fs13" style="flex:1;">bKash</div>${ic('check',16)}</div>
+      <div class="roleCard" style="padding:12px; opacity:0.6;"><div class="ic-box" style="width:36px;height:36px; background:var(--soil-light);">${ic('wallet',16)}</div><div class="fw7 fs13" style="flex:1;">Cash on delivery</div></div>
+    </div>
+    <div class="card" style="background:var(--marigold-light); border:none;"><div class="row" style="align-items:flex-start; gap:8px;"><div style="color:var(--marigold-dark);">${ic('alert',15)}</div><div class="fs11" style="line-height:1.5;">AI fraud check: this order matches your usual pattern — no action needed.</div></div></div>
+  </div>
+  <div class="section" style="padding-bottom:20px;">
+    <div class="card"><div class="row between"><span class="fw8">Total to pay</span><span class="fw8 num" style="font-size:17px;">৳${subtotal+15}</span></div></div>
+    <button class="btn btn-marigold" style="margin-top:12px;" onclick="state.cart=[]; go('orderConfirm')">Place order</button>
+  </div>`;
+};
+
+Screens.orderConfirm = ()=> `
+  <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; text-align:center;">
+    <div style="width:76px;height:76px; background:var(--success-light); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--success); margin-bottom:18px;">${ic('check',34,2.4)}</div>
+    <div style="font-family:'Fraunces'; font-size:20px; font-weight:600;">Order confirmed!</div>
+    <p class="muted fs13" style="margin-top:8px; line-height:1.6;">Your order #FF‑2291 will arrive today between 5–7 PM. You'll get an SMS update when it's out for delivery.</p>
+    <button class="btn btn-primary" style="margin-top:24px;" onclick="go('orders')">Track my order</button>
+    <button class="btn btn-ghost" style="margin-top:10px;" onclick="go('shop')">Continue shopping</button>
+  </div>`;
+
+Screens.orders = ()=> `
+  ${topbar({title:'My orders'})}
+  <div class="section" style="padding-top:16px;">
+    <div class="card" onclick="go('orderTrack')" style="cursor:pointer;">
+      <div class="row between"><div class="fw8 fs13">Order #FF‑2291</div><span class="chip warn">Out for delivery</span></div>
+      <div class="muted fs11" style="margin-top:2px;">2 items · ৳295 · Today, 5–7 PM</div>
+    </div>
+    <div class="card">
+      <div class="row between"><div class="fw8 fs13">Order #FF‑2264</div><span class="chip good">Delivered</span></div>
+      <div class="muted fs11" style="margin-top:2px;">3 items · ৳480 · 28 Jul 2026</div>
+    </div>
+    <div class="card">
+      <div class="row between"><div class="fw8 fs13">Order #FF‑2201</div><span class="chip good">Delivered</span></div>
+      <div class="muted fs11" style="margin-top:2px;">1 item · ৳80 · 21 Jul 2026</div>
+    </div>
+  </div>`;
+
+Screens.orderTrack = ()=> `
+  ${topbar({title:'Order #FF‑2291', back:true})}
+  <div class="section" style="padding-top:16px;">
+    <div class="card">
+      ${[['Order placed',true],['Preparing at farm',true],['Out for delivery',true],['Delivered',false]].map(([t,done],i,arr)=>`
+        <div class="row" style="align-items:flex-start; gap:12px; ${i<arr.length-1?'margin-bottom:16px;':''} position:relative;">
+          <div style="width:26px;height:26px;border-radius:50%; background:${done?'var(--forest)':'var(--paper)'}; color:${done?'#fff':'var(--soil-light)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0; z-index:2;">${done?ic('check',13):''}</div>
+          ${i<arr.length-1?`<div style="position:absolute; left:12.5px; top:26px; width:1.5px; height:32px; background:${done?'var(--forest-soft)':'var(--line)'};"></div>`:''}
+          <div class="fw7 fs13" style="padding-top:3px;">${t}</div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="row between"><div class="fw8 fs13">Delivery partner</div><span class="chip sky">${ic('truck',11)} On the way</span></div>
+      <div class="muted fs12" style="margin-top:4px;">Rahim · Arriving in ~25 min</div>
+    </div>
+  </div>`;
+
+/* ============================= RENDER ============================= */
+function render(){
+  const body = document.getElementById('appBody');
+  window._appBody = body;
+  const fn = Screens[state.screen] || Screens.home;
+  body.innerHTML = fn();
+  document.getElementById('bottomNavHolder').innerHTML = bottomNav();
+  renderPanel();
+}
+
+function renderPanel(){
+  const rs = document.getElementById('roleSwitch');
+  rs.innerHTML = Object.keys(ROLES).map(r=>`<button class="panel-btn ${state.role===r?'active':''}" onclick="setRole('${r}')">${ROLES[r].label}</button>`).join('');
+  const jl = document.getElementById('jumpList');
+  const tabs = state.role ? ROLES[state.role].tabs : ['login'];
+  jl.innerHTML = tabs.map(t=>`<button class="panel-btn ${state.screen===t?'active':''}" onclick="go('${t}')">${(TAB_META[t]?TAB_META[t].label:'Login')}</button>`).join('');
+}
+
+render();
+</script>
+</body>
+</html>
